@@ -8,5 +8,6 @@ from .paperspace_utils import *
 from .sdk_version_hash import *
 
 from .benchmarks.custom_metrics import register_custom_metric
+from . import api_tools
 
 __version__ = "0.1.0"
