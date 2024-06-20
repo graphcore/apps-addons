@@ -1,0 +1,6 @@
+{
+  "dependencies" : [
+    "sphinx_resources",
+    "llvm"
+  ]
+}

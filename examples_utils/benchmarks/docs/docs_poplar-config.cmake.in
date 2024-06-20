@@ -1,0 +1,5 @@
+set(DOCS_BENCHMARKING_TOOLS_VERSION @RELEASE@)
+
+# User guide.
+set(DOCS_BENCHMARKING_TOOLS_USER_GUIDE_HTML_ZIP @user_guide_html_zip@)
+set(DOCS_BENCHMARKING_TOOLS_USER_GUIDE_PDF      @user_guide_pdf@)

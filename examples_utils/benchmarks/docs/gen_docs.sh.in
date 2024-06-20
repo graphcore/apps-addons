@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+source @CMAKE_BINARY_DIR@/venv/bin/activate
+
+echo gen_docs.sh
+echo $LIBRARY_PATH
+echo $PYTHONPATH
+echo python ${*}
+python ${*}
