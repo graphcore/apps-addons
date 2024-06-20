@@ -1,8 +1,11 @@
 # Copyright (c) 2023 Graphcore Ltd. All rights reserved.
 
 import pytest
+import shutil
+
 from pathlib import Path
 from typing import Dict, Generator, List, Tuple
+
 from requirements.requirement import Requirement
 from examples_utils.precommit.pinned_requirements.pinned_requirements import (
     main,
@@ -11,6 +14,8 @@ from examples_utils.precommit.pinned_requirements.pinned_requirements import (
     invalid_requirements,
     try_write_fixed_requirements,
 )
+
+TEST_FILE_ROOT = Path(__file__).parent / "test_files"
 
 
 REQUIREMENTS: List[Tuple[str, bool]] = [
@@ -104,35 +109,44 @@ def test_bad_filename():
     assert output == 2
 
 
+def check_output(output_val: int, expected_output: int, truth_fn: Path, actual_fn: Path):
+    assert output_val == expected_output
+
+    with open(truth_fn) as fh:
+        expected_lines = fh.readlines()
+
+    with open(actual_fn) as fh:
+        changed_lines = fh.readlines()
+
+    # assert len(expected_lines) == len(changed_lines)
+
+    for e, c in zip(expected_lines, changed_lines):
+        assert e == c
+
+
 def test_fix_invalid(tmp_path: Path, mocker: Generator["MockerFixture", None, None]):
-    mocker.patch("importlib.metadata.version", return_value="5.1.1")
+    mock_api = mocker.MagicMock(name="metadata")
+    mock_api.side_effect = lambda x: "5.5.1" if x == "pyyaml" else None
 
-    requirement_dict = {
-        "numpy==1.23.5": True,
-        "pandas": False,
-        "git+https://github.com/graphcore/examples-utils@latest_stable": True,
-        "git+https://github.com/graphcore/examples-utils": False,
-    }
-
-    reqs = [Requirement.parse(x) for x in requirement_dict.keys()]
+    mocker.patch("importlib.metadata.version", new=mock_api)
 
     invalid = [
-        Requirement.parse("pandas"),
+        Requirement.parse("pyyaml"),
         Requirement.parse("git+https://github.com/graphcore/examples-utils"),
     ]
 
-    req_file = create_req_file(tmp_path, requirement_dict)
-    try_write_fixed_requirements(reqs, invalid, req_file)
+    tmp_filepath = tmp_path / "requirements.txt"
+    shutil.copyfile(TEST_FILE_ROOT / "mock_requirements.txt", tmp_filepath)
 
-    expected_lines = [
-        "numpy==1.23.5",
-        "pandas==5.1.1",
-        "git+https://github.com/graphcore/examples-utils@latest_stable",
-        "git+https://github.com/graphcore/examples-utils",
-    ]
-    with open(req_file) as fh:
-        lines = fh.readlines()
+    output = try_write_fixed_requirements(invalid, tmp_filepath)
 
-    assert len(lines) == len(requirement_dict)
-    for line in lines:
-        assert line.strip() in expected_lines
+    assert output == True
+    check_output(output, 1, TEST_FILE_ROOT / "expected_fixed_requirements.txt", tmp_filepath)
+
+
+def test_fix_invalid_all_valid(tmp_path: Path):
+    tmp_filepath = tmp_path / "requirements.txt"
+    shutil.copyfile(TEST_FILE_ROOT / "expected_fixed_requirements.txt", tmp_filepath)
+    output = try_write_fixed_requirements([], tmp_filepath)
+
+    check_output(output, False, TEST_FILE_ROOT / "expected_fixed_requirements.txt", tmp_filepath)
